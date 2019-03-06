@@ -5,7 +5,6 @@ This code is adapted from <https://github.com/filipedeschamps/doom-fire-algorith
 
 
 import pygame
-import math
 from random import randint, random
 
 
@@ -25,7 +24,7 @@ PALETTE = (
 
 # Fire intensity
 LOW = (0, 14)
-MEDIUM = (22, 36)
+MEDIUM = (14, 32)
 HIGH = (32, 36)
 
 UPDATE_RATE = 75
@@ -33,10 +32,32 @@ PIXEL_SIZE = 5
 
 
 class Fire(object):
-
+    """A DOOM-style fire animation.
+    
+    Attributes:
+        width (int): The fire width.
+        height (int): The fire height.
+        pixels (list): The fire pixels.
+        
+    Examples:
+        Instantiate a fire with width and height 20:
+        
+        >>> Fire(width=20, height=20, intensity=HIGH, pixel_size=5)
+    """
     def __init__(self, width, height, intensity, pixel_size=5):
+        """Creates a DOOM-style fire animation.
+        
+        
+        Args:
+            width (int): The fire width.
+            height (int): The fire height.
+            intensity (2-tuples): The intensity of the fire. Use one of the 
+                top-level constants HIGH, MEDIUM, LOW.
+            pixel_size (int, optional): The size of each rect used to draw 
+                the fire. Defaults to 5.
+        """
         self.width, self.height = width, height
-        self.pixel_size = pixel_size
+        self._pixel_size = pixel_size
         
         self.pixels = self._create(width, height, intensity)
         
@@ -57,10 +78,15 @@ class Fire(object):
                     pass
                               
     def draw(self, surface, offset=(0, 0)):
-        """Draw the fire using a set of rects."""
-        rects = self._rects(self.width, self.height, self.pixel_size, offset)
+        """Draw the fire using a set of rects.
+        
+        Args:
+            surface (pygame.Surface): The surface to draw the fire.
+            offset (2-tuple, optional): The topleft offset. Defaults to (0, 0).
+        """
+        rects = self._rects(self.width, self.height, self._pixel_size, offset)
         for pixel, rect in zip(self.pixels, rects):
-            pygame.draw.rect(surface, get_color(pixel), rect)
+            pygame.draw.rect(surface, self.color(pixel), rect)
                     
     def increase(self):
         """Increase the intensity of the fire source."""
@@ -72,6 +98,25 @@ class Fire(object):
         for i in range(1, self.width + 1):
             self.pixels[-i] = max(self.pixels[-i] - randint(0, 14), 0)
             
+    @staticmethod
+    def color(value, pallete=PALETTE):
+        """Returns a color represented by a pixel value.
+        
+        A pallete can be passed as a keyword argument. Note that
+        a pallete must have atleast 36 length.
+        
+        Args:
+            value (int): The pixel value that will be mapped to a color.
+            pallete (list, optional): The color pallete. If None is passed,
+                it will be set to the default pallete.
+        """
+        v = max(value, 0)
+        try:
+            return pallete[v]
+        except IndexError:
+            return pallete[-1]
+    
+    
     @staticmethod
     def _create(width, height, intensity=HIGH):
         """Creates a fire source."""
@@ -88,17 +133,8 @@ class Fire(object):
         for i in range(height):
             for j in range(width):
                 yield (x0 + j*pixel_size, 
-                    y0 + i*pixel_size, pixel_size, pixel_size)
-    
-    
-def get_color(c):
-    """Maps a pixel value to a color."""
-    c = max(c, 0)
-    try:
-        return PALETTE[c]
-    except IndexError:
-        return PALETTE[-1]
-           
+                    y0 + i*pixel_size, pixel_size, pixel_size)                
+               
            
 def main():
     width, height = 640, 360
@@ -118,8 +154,7 @@ def main():
     print('\nUse the arrow keys up and down to increase/decrease the fire.')
     
     while True:
-    
-        
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return 
@@ -128,16 +163,22 @@ def main():
                 fire.decrease()
             
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
-                fire.increase()  
-                
-                
+                fire.increase() 
+        
+        # check that the fire will only be updated every 75ms,
+        # otherwise the animation will be too fast.
         if elapsed >= UPDATE_RATE:
             fire.update()
             elapsed = 0
         
+        # clear the screen
         screen.fill((7, 7, 7))
+        
+        # draw the fire and pygame logo
         fire.draw(screen)
         screen.blit(pygame_img, (50, 100))
+        
+        # update the screen
         pygame.display.update()
         
         elapsed += clock.tick(60)
